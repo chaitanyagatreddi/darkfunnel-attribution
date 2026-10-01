@@ -4,7 +4,7 @@ Capture of product thinking around a dark-funnel attribution platform, a micro-S
 
 ## Core idea
 
-A customer installs a lightweight script / GTM tag and connects analytics. Every URL they share can be converted into a trackable link with a unique referral ID and UTM.
+A customer installs a lightweight script / GTM tag and connects Search Console. Every URL they share can be converted into a trackable link with a unique referral ID and UTM.
 
 When that link is shared across Reddit, Slack, Discord, WhatsApp, Telegram, DMs, forums, etc., the platform tracks visits and connects them to downstream goals like signup, demo, or purchase.
 
@@ -39,7 +39,7 @@ This is link attribution + analytics.
 
 1. **Attribution is messy** — shares without clicks, in-app browsers stripping referrers, multi-device, copied/shortened links, organic mentions with no trackable URL. Deterministic attribution only works when the link is actually clicked. Everything else is inference.
 2. **Dark-funnel estimation** — public signal ingestion, mention detection, time-series correlation with traffic/branded search/signups, models that output influence + confidence. Correlation ≠ causation; delayed effects; overlapping channels; small samples; trust.
-3. **Identity stitching** — anonymous click → session → signup → demo → purchase across cookies, CRM, Stripe, HubSpot, GA4. Never perfect.
+3. **Identity stitching** — anonymous click → session → signup → demo → purchase across cookies, CRM, Stripe, HubSpot. Never perfect.
 4. **Privacy / compliance** — GDPR, consent, cookie deprecation, not claiming what cannot be proven.
 
 ### Tiers
@@ -52,28 +52,26 @@ Hardest part is not the script or links — it is **credible probabilistic attri
 
 Easiest credible wedge: trackable links + first-party conversion tracking, then estimated influence only with explicit uncertainty.
 
-## Tag + Search Console + Analytics
+## Tag + Search Console
 
-Onboarding: install tag, then connect Search Console and GA4.
+Onboarding: install tag, then connect Search Console.
 
 | Source | Primary value |
 |---|---|
 | Tag | First-party truth: pageviews, sessions, conversions, referral params, on-site behavior |
-| GA4 | Historical baseline, funnels, events, audiences, campaign performance |
 | Search Console | Organic demand: branded vs non-branded queries, impressions, clicks, landing pages, trends |
 
-Tag = owned event layer. GA4 + GSC = external signal layers.
+Tag = owned event layer. GSC = external signal layer.
 
 ### Direct attribution (high confidence)
 
-Someone clicks a trackable link → tag captures referral ID / UTM → GA4 can corroborate session source/medium → tie session to signup/demo/purchase.
+Someone clicks a trackable link → tag captures referral ID / UTM → tie session to signup/demo/purchase.
 
 ### Dark-funnel inference (medium confidence)
 
 Someone sees a Reddit thread without clicking, then converts later. No click event, but possible:
 
 - Spike in branded search in Search Console
-- Lift in direct/none or organic in GA4
 - Timing correlated with public mention activity
 
 Example framing: "This Reddit discussion likely influenced 12–28 signups over the next 7 days (confidence: medium)."
@@ -84,20 +82,19 @@ Search Console helps: which pages gained impressions/clicks after a mention; shi
 
 ### Connect flow
 
-One Google OAuth for both, user picks verified site/property.
+Google OAuth for Search Console, user picks verified site.
 
 - **Tag only**: click → visit → conversion for owned links. Limited organic/discussion view.
-- **Tag + GA4**: broader conversion mapping, funnels, historical comparison.
-- **Tag + GA4 + GSC**: best for dark-funnel estimation. Bridge: public mention → branded search → site visit → conversion.
+- **Tag + GSC**: best for dark-funnel estimation. Bridge: public mention → branded search → site visit → conversion.
 
-Adding GSC + GA4 raises complexity from medium to high. Integrations are standard; joining noisy signals on a timeline without overclaiming is hard.
+Adding GSC raises complexity from medium to high. The integration is standard; joining noisy signals on a timeline without overclaiming is hard.
 
 **Limitations:**
 
-- GA4 is not perfect (sampling, consent, ad blockers). Tag should remain primary for conversions you care about.
+- Tag should remain primary for conversions you care about.
 - Search Console is delayed and aggregated (~2–3 days). Trends, not user-level journeys.
 - Cannot attribute individual Reddit readers deterministically. Cohort/trend level only.
-- User must have admin/access to the correct GA4 property and GSC site.
+- User must have admin/access to the correct GSC site.
 
 ## Unique UTM + referral ID on every external share
 
@@ -117,7 +114,7 @@ Params can live only in the redirect layer and be written into first-party stora
 | Field | Purpose |
 |---|---|
 | Referral ID (`ref_id`) | Canonical ID — unique per link, used in DB and tag |
-| UTM params | Human-readable + GA4-compatible campaign metadata |
+| UTM params | Human-readable campaign metadata |
 
 One referral ID maps to one UTM set, stored at link creation.
 
@@ -153,9 +150,9 @@ One referral ID maps to one UTM set, stored at link creation.
 4. Keep `ref_id` on subsequent events
 5. On conversion, send `ref_id` with the event
 
-UTMs alone are weak (editable, reused, GA4 may drop them). Referral ID alone is strong internally but invisible in GA4 unless mapped. Together: `ref_id` = source of truth; UTMs = GA4 compatibility.
+UTMs alone are weak (editable, reused). Referral ID alone is strong internally. Together: `ref_id` = source of truth; UTMs = campaign metadata.
 
-Reporting per link: clicks (redirect), visits (tag/GA4), unique visitors, time to conversion, signups/demos/purchases, bounce/pages, assisted branded search lift (GSC, inferred).
+Reporting per link: clicks (redirect), visits (tag), unique visitors, time to conversion, signups/demos/purchases, bounce/pages, assisted branded search lift (GSC, inferred).
 
 **Design rules:**
 
@@ -179,7 +176,7 @@ Works when people click the trackable link. Does not work for private conversati
 | Instagram | Yes | Usually none | No | Limited (public posts/stories) |
 | X | Yes | Usually none | No | Yes for public posts (with listening) |
 
-Referral ID + UTM are the source of truth, not platform referrer. In-app browsers often strip referrer → GA4 shows direct/none; tag still wins if it captures `ref_id`.
+Referral ID + UTM are the source of truth, not platform referrer. In-app browsers often strip referrer; tag still wins if it captures `ref_id`.
 
 - **WhatsApp**: click → attributed. Verbal rec / screenshot / brand name only → not attributable. No API to private chats.
 - **Telegram**: same for private chats. Public channels can be monitored if posted. Click → conversion works.
@@ -283,7 +280,7 @@ Does mean: large invisible influence, Direct as junk drawer, demand for better c
 Three layers:
 
 - **Measurable**: trackable links, tag, conversions — high confidence
-- **Partially visible**: backlinks, branded search, GA4 trends — medium
+- **Partially visible**: backlinks, branded search — medium
 - **Hidden**: private shares, WOM, offline recs — estimated only
 
 ## 6sense, HockeyStack, and peers
@@ -304,7 +301,7 @@ Why unsolved: structurally missing private data; inference presented confidently
 
 6sense is more "who is likely in-market" than "which Reddit comment caused revenue." HockeyStack is more "connect the visible journey and model the gaps."
 
-Room exists if positioned as: trackable links for every share; tag + GA4 + GSC; honest measured vs estimated; built for founders/marketers sharing everywhere — not just enterprise ABM.
+Room exists if positioned as: trackable links for every share; tag + GSC; honest measured vs estimated; built for founders/marketers sharing everywhere — not just enterprise ABM.
 
 Do not claim complete dark-funnel attribution. Claim: measure what can be measured, estimate what cannot, with confidence levels.
 
@@ -359,7 +356,7 @@ Tag; unique links; clicks / visits / conversions; basic dashboard.
 Skip initially: AI influence engine, Reddit scraping, account deanonymization, CRM, ABM, enterprise workflows.
 
 **Phase 2 — better measurement**
-GA4; Search Console; referrer domain reporting; backlink propagation.
+Search Console; referrer domain reporting; backlink propagation.
 
 **Phase 3 — dark-funnel estimation**
 Public mention detection; branded search lift; estimated influence + confidence.
@@ -390,7 +387,6 @@ Promise: unique trackable link per share; see clicks, visits, signups per link.
 One-sentence options discussed:
 
 - "You share your product on Reddit, X, LinkedIn, and DMs — but you never know which link actually drove signups."
-- "GA4 tells you traffic. It doesn't tell you which exact post, DM, or comment thread created it."
 - "If you're doing founder-led distribution, you need a unique link for every share."
 
 Tiny validation asset: landing page, demo/mock of per-link stats, founder post. No full product required.
@@ -417,7 +413,7 @@ Do not, for validation: AI estimation, GSC first, full dashboard, 6sense compari
 
 ICP: solo SaaS founders, indie hackers, B2B marketers in communities, devtool founders, agencies running launches. Avoid enterprise ABM, paid-ads-only, people who never share links.
 
-Useful user language: which Reddit post worked; DMs with no idea; GA4 useless for this; different link per post; pay to stop guessing.
+Useful user language: which Reddit post worked; DMs with no idea; different link per post; pay to stop guessing.
 
 ## Working rules (from this conversation)
 
